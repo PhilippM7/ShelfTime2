@@ -79,7 +79,6 @@ import kaf.audiobookshelfwearos.app.services.MyDownloadService
 import kaf.audiobookshelfwearos.app.services.PlayerService
 import kaf.audiobookshelfwearos.app.userdata.UserDataManager
 import kaf.audiobookshelfwearos.app.viewmodels.ApiViewModel
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -507,7 +506,7 @@ class ChapterListActivity : ComponentActivity() {
     }
 
     private fun saveAudiobookToDB(item: LibraryItem) {
-        GlobalScope.launch {
+        lifecycleScope.launch {
             val db = (applicationContext as MainApp).database
             db.libraryItemDao().insertLibraryItem(item)
         }
