@@ -79,6 +79,7 @@ import kaf.audiobookshelfwearos.app.services.MyDownloadService
 import kaf.audiobookshelfwearos.app.services.PlayerService
 import kaf.audiobookshelfwearos.app.userdata.UserDataManager
 import kaf.audiobookshelfwearos.app.viewmodels.ApiViewModel
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -600,7 +601,6 @@ class ChapterListActivity : ComponentActivity() {
                     .padding(start = 10.dp, end = 10.dp)
                     .fillMaxWidth()
             )
-//            Spacer(modifier = Modifier.height(5.dp))
             Text(
                 text = timeToString(track.start),
                 fontSize = 10.sp,
