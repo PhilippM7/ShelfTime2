@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -526,9 +527,11 @@ class ChapterListActivity : ComponentActivity() {
     private fun Chapter(audiobook: LibraryItem, track: Chapter) {
         Column(modifier = Modifier
             .fillMaxWidth()
-            .clickable {
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
                 saveAudiobookToDB(audiobook)
-                // Start the PlayerService
                 PlayerService.setAudiobook(this, audiobook, track.start)
                 val intent = Intent(this@ChapterListActivity, PlayerActivity::class.java)
                 startActivity(intent)

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -378,7 +379,10 @@ class BookListActivity : ComponentActivity() {
     private fun BookItem(item: LibraryItem, imageLoader: ImageLoader, serverUrl: String) {
         Column(modifier = Modifier
             .fillMaxWidth()
-            .clickable {
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
                 val intent = Intent(this, ChapterListActivity::class.java).apply {
                     putExtra("id", item.id)
                 }
