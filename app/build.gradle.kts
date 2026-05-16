@@ -22,18 +22,6 @@ android {
         }
     }
 
-    flavorDimensions += "version"
-    productFlavors {
-        create("standard") {
-            dimension = "version"
-        }
-        create("legacy") {
-            dimension = "version"
-            applicationIdSuffix = ".legacy"
-            versionNameSuffix = "-legacy"
-        }
-    }
-
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -41,6 +29,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+        create("legacy") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".legacy"
+            versionNameSuffix = "-legacy"
+            matchingFallbacks += listOf("debug")
         }
     }
     compileOptions {
