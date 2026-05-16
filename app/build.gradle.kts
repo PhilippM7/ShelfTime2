@@ -63,6 +63,14 @@ android {
     }
 }
 
+// Firebase needs google-services.json which is gitignored — disable for local debug builds
+afterEvaluate {
+    tasks.matching { it.name.startsWith("process") && it.name.contains("GoogleServices") }
+        .configureEach { enabled = false }
+    tasks.matching { it.name.startsWith("injectCrashlytics") }
+        .configureEach { enabled = false }
+}
+
 dependencies {
     implementation("androidx.wear:wear-tooling-preview:1.0.0")
     implementation("com.google.firebase:firebase-crashlytics:20.0.1")
