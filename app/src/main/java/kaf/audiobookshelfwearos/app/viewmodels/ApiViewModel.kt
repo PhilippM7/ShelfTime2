@@ -97,7 +97,7 @@ class ApiViewModel(private val apiHandler: ApiHandler) : ViewModel() {
 
         try {
             FileOutputStream(file).use { fos ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos)
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 85, fos)
             }
         } catch (e: IOException) {
             e.printStackTrace()

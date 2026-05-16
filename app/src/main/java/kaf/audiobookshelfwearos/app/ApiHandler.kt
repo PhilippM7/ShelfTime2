@@ -87,7 +87,7 @@ class ApiHandler(private val context: Context) {
 
     suspend fun getCover(id: String): Bitmap? {
         return withContext(Dispatchers.IO) {
-            val request = getRequest("/api/items/$id/cover")
+            val request = getRequest("/api/items/$id/cover?width=200")
             try {
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) Timber.d("code: " + response.code)
