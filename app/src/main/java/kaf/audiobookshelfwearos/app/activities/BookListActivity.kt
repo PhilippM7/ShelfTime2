@@ -28,16 +28,13 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,13 +57,16 @@ import androidx.wear.compose.material.Vignette
 import androidx.wear.compose.material.VignettePosition
 import androidx.wear.input.RemoteInputIntentHelper
 import androidx.wear.input.wearableExtender
+import coil.ImageLoader
 import coil.compose.AsyncImage
+import coil.request.CachePolicy
 import kaf.audiobookshelfwearos.R
 import kaf.audiobookshelfwearos.app.ApiHandler
 import kaf.audiobookshelfwearos.app.data.Library
 import kaf.audiobookshelfwearos.app.data.LibraryItem
 import kaf.audiobookshelfwearos.app.userdata.UserDataManager
 import kaf.audiobookshelfwearos.app.viewmodels.ApiViewModel
+import okhttp3.OkHttpClient
 import timber.log.Timber
 
 class BookListActivity : ComponentActivity() {
@@ -100,6 +100,24 @@ class BookListActivity : ComponentActivity() {
         }
 
         viewModel.getLibraries(this, true, UserDataManager(this).offlineMode)
+
+        val userDataManager = UserDataManager(this)
+        val imageLoader = ImageLoader.Builder(this)
+            .okHttpClient {
+                OkHttpClient.Builder()
+                    .addInterceptor { chain ->
+                        chain.proceed(
+                            chain.request().newBuilder()
+                                .header("Authorization", "Bearer ${userDataManager.token}")
+                                .build()
+                        )
+                    }
+                    .build()
+            }
+            .memoryCachePolicy(CachePolicy.ENABLED)
+            .diskCachePolicy(CachePolicy.ENABLED)
+            .build()
+        val serverUrl = userDataManager.getCompleteAddress()
 
         setContent {
             val libraries by viewModel.libraries.observeAsState()
@@ -137,9 +155,11 @@ class BookListActivity : ComponentActivity() {
                 ManualLoadView(displayLibraries, isSearchActive)
             }
             Libraries(
-                displayLibraries, 
+                displayLibraries,
                 isSearchActive = isSearchActive,
                 searchQuery = searchQuery,
+                imageLoader = imageLoader,
+                serverUrl = serverUrl,
                 onSearchToggle = {
                     if (!isSearchActive) {
                         launchRemoteSearchInput(launcher, remoteInputs)
@@ -266,6 +286,8 @@ class BookListActivity : ComponentActivity() {
         libraries: List<Library>?,
         isSearchActive: Boolean = false,
         searchQuery: String = "",
+        imageLoader: ImageLoader = ImageLoader(this),
+        serverUrl: String = "",
         onSearchToggle: () -> Unit = {}
     ) {
         val scalingLazyListState = rememberScalingLazyListState(0)
@@ -335,7 +357,7 @@ class BookListActivity : ComponentActivity() {
                         for ((libIndex, library) in libraryList.withIndex()) {
                             itemsIndexed(library.libraryItems, key = { _, item -> item.id }) { index, item ->
                                 Column {
-                                    BookItem(item)
+                                    BookItem(item, imageLoader, serverUrl)
                                     val showDivider =
                                         (index != library.libraryItems.size - 1 || libIndex != libraryList.size - 1)
                                     if (showDivider) {
@@ -351,20 +373,17 @@ class BookListActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun BookItem(item: LibraryItem) {
+    private fun BookItem(item: LibraryItem, imageLoader: ImageLoader, serverUrl: String) {
         Column(modifier = Modifier
             .fillMaxWidth()
             .clickable {
                 val intent = Intent(this, ChapterListActivity::class.java).apply {
-                    putExtra(
-                        "id",
-                        item.id
-                    )
+                    putExtra("id", item.id)
                 }
                 startActivity(intent)
             }
             .padding(16.dp)) {
-            CoverImage(itemId = item.id)
+            CoverImage(itemId = item.id, imageLoader = imageLoader, serverUrl = serverUrl)
             Text(
                 text = item.title,
                 textAlign = TextAlign.Center,
@@ -385,22 +404,17 @@ class BookListActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun CoverImage(itemId: String) {
-        val coverUrls by viewModel.coverImages.observeAsState()
-        LaunchedEffect(itemId) {
-            viewModel.getCoverImage(itemId, this@BookListActivity)
-        }
-        val bitmap = remember(coverUrls, itemId) { coverUrls?.get(itemId) }
-
+    private fun CoverImage(itemId: String, imageLoader: ImageLoader, serverUrl: String) {
         AsyncImage(
-            model = bitmap ?: "",
+            model = "$serverUrl/api/items/$itemId/cover?width=200",
+            imageLoader = imageLoader,
             contentDescription = null,
             placeholder = painterResource(R.drawable.placeholder),
             error = painterResource(R.drawable.placeholder),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(10.dp)
-                .height(100.dp) // Adjusted height for better display
+                .height(100.dp)
         )
     }
 }
