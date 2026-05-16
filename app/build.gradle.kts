@@ -22,6 +22,18 @@ android {
         }
     }
 
+    flavorDimensions += "version"
+    productFlavors {
+        create("standard") {
+            dimension = "version"
+        }
+        create("legacy") {
+            dimension = "version"
+            applicationIdSuffix = ".legacy"
+            versionNameSuffix = "-legacy"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
