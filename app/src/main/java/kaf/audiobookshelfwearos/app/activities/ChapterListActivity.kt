@@ -126,7 +126,6 @@ class ChapterListActivity : ComponentActivity() {
             if (libraryItem?.id?.isNotEmpty() == true)
                 libraryItem?.run {
                     Scaffold(
-                        modifier = Modifier.onGloballyPositioned {},
                         positionIndicator = {
                             PositionIndicator(scalingLazyListState = scalingLazyListState)
                         },

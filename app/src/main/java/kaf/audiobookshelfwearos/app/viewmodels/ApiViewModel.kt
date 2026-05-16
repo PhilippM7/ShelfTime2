@@ -14,10 +14,12 @@ import kaf.audiobookshelfwearos.app.MainApp
 import kaf.audiobookshelfwearos.app.data.Library
 import kaf.audiobookshelfwearos.app.data.LibraryItem
 import kaf.audiobookshelfwearos.app.data.User
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -59,25 +61,21 @@ class ApiViewModel(private val apiHandler: ApiHandler) : ViewModel() {
     fun getCoverImage(itemId: String, context: Context) {
         val currentImages = _coverImages.value ?: mapOf()
 
-        if (currentImages.containsKey(itemId)) {
-            _coverImages.postValue(currentImages)
-            return  // If the image is already loaded, do nothing.
-        }
-
-        val cachedCover = loadBitmapFromCache(context,itemId)
-        if(cachedCover!=null){
-            val updatedImages = currentImages.toMutableMap()
-            updatedImages[itemId] = cachedCover
-            _coverImages.postValue(updatedImages)
-            return
-        }
+        if (currentImages.containsKey(itemId)) return
 
         viewModelScope.launch {
+            val cachedCover = withContext(Dispatchers.IO) { loadBitmapFromCache(context, itemId) }
+            if (cachedCover != null) {
+                val updatedImages = (_coverImages.value ?: mapOf()).toMutableMap()
+                updatedImages[itemId] = cachedCover
+                _coverImages.postValue(updatedImages)
+                return@launch
+            }
+
             val bitmap = apiHandler.getCover(itemId)
             bitmap?.let {
-                // Post new state with updated image.
-                saveBitmapToCache(context, bitmap, itemId)
-                val updatedImages = currentImages.toMutableMap()
+                withContext(Dispatchers.IO) { saveBitmapToCache(context, bitmap, itemId) }
+                val updatedImages = (_coverImages.value ?: mapOf()).toMutableMap()
                 updatedImages[itemId] = it
                 _coverImages.postValue(updatedImages)
             }

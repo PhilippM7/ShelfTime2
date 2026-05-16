@@ -277,7 +277,6 @@ class BookListActivity : ComponentActivity() {
         }
 
         Scaffold(
-            modifier = Modifier.onGloballyPositioned {},
             positionIndicator = {
                 PositionIndicator(scalingLazyListState = scalingLazyListState)
             },
