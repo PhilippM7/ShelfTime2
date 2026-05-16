@@ -289,8 +289,8 @@ class BookListActivity : ComponentActivity() {
                 state = scalingLazyListState,
                 scalingParams = ScalingLazyColumnDefaults.scalingParams(
                     edgeScale = 0.5f,
-                    minTransitionArea = 0.5f,
-                    maxTransitionArea = 0.5f
+                    minTransitionArea = 0.2f,
+                    maxTransitionArea = 0.6f
                 ),
                 modifier = Modifier
                     .fillMaxSize()
@@ -334,9 +334,8 @@ class BookListActivity : ComponentActivity() {
                     } else {
                         // Show library items
                         for ((libIndex, library) in libraryList.withIndex()) {
-                            itemsIndexed(library.libraryItems) { index, item ->
+                            itemsIndexed(library.libraryItems, key = { _, item -> item.id }) { index, item ->
                                 Column {
-                                    Timber.d(item.title)
                                     BookItem(item)
                                     val showDivider =
                                         (index != library.libraryItems.size - 1 || libIndex != libraryList.size - 1)
@@ -389,10 +388,13 @@ class BookListActivity : ComponentActivity() {
     @Composable
     private fun CoverImage(itemId: String) {
         val coverUrls by viewModel.coverImages.observeAsState()
-        viewModel.getCoverImage(itemId, this)
+        LaunchedEffect(itemId) {
+            viewModel.getCoverImage(itemId, this@BookListActivity)
+        }
+        val bitmap = remember(coverUrls, itemId) { coverUrls?.get(itemId) }
 
         AsyncImage(
-            model = coverUrls?.get(itemId) ?: "",
+            model = bitmap ?: "",
             contentDescription = null,
             placeholder = painterResource(R.drawable.placeholder),
             error = painterResource(R.drawable.placeholder),

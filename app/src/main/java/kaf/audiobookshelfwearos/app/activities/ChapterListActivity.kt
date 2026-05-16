@@ -138,8 +138,8 @@ class ChapterListActivity : ComponentActivity() {
                             state = scalingLazyListState,
                             scalingParams = ScalingLazyColumnDefaults.scalingParams(
                                 edgeScale = 0.5f,
-                                minTransitionArea = 0.5f,
-                                maxTransitionArea = 0.5f
+                                minTransitionArea = 0.2f,
+                                maxTransitionArea = 0.6f
                             ),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier
@@ -159,7 +159,7 @@ class ChapterListActivity : ComponentActivity() {
                                 )
                             }
 
-                            itemsIndexed(media.chapters) { index, _ ->
+                            itemsIndexed(media.chapters, key = { _, chapter -> chapter.title + chapter.start }) { index, _ ->
                                 Chapter(this@run, media.chapters[index])
                                 if (index != media.chapters.size) {
                                     Divider()
@@ -178,7 +178,7 @@ class ChapterListActivity : ComponentActivity() {
     ) {
         // Collect download progress from service
         val downloadProgressFlow = MyDownloadService.getProgressFlow()
-        var trackProgresses by remember { mutableStateOf(mutableStateMapOf<String, DownloadProgress>()) }
+        val trackProgresses = remember { mutableStateMapOf<String, DownloadProgress>() }
         var audiobookProgress by remember { mutableStateOf<AudiobookDownloadProgress?>(null) }
 
         var isDownloaded by remember {
@@ -324,19 +324,6 @@ class ChapterListActivity : ComponentActivity() {
                 
                 delay(2000L) // Check every 2 seconds
             }
-        }
-
-        LaunchedEffect(isDownloading) {
-            while (isDownloading) {
-                downloadedCount =
-                    libraryItem.media.tracks.count { track -> track.isDownloaded(this@ChapterListActivity) }
-                isDownloading = libraryItem.media.tracks.any { track ->
-                    track.isDownloading(this@ChapterListActivity)
-                }
-                delay(1000L)
-            }
-            isDownloaded =
-                libraryItem.media.tracks.all { track -> track.isDownloaded(this@ChapterListActivity) }
         }
 
         val isSyncing by viewModel.isSyncing.collectAsState()

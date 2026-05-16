@@ -169,11 +169,7 @@ class PlayerActivity : ComponentActivity() {
                             .weight(1f),
                         contentAlignment = Alignment.Center
                     ) {
-                        var progressBar = 0f
-                        if (duration > 0) progressBar = currentPosition.toFloat() / duration
-                        Timber.d("duration $duration")
-                        Timber.d("currentPosition $currentPosition")
-                        Timber.d("progressBar $progressBar")
+                        val progressBar = if (duration > 0) currentPosition.toFloat() / duration else 0f
                         if (isBuffering) CircularProgressIndicator(
                             modifier = Modifier.fillMaxSize(),
                             startAngle = 0f,
