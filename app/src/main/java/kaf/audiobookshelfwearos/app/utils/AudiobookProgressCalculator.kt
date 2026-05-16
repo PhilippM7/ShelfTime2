@@ -26,14 +26,10 @@ object AudiobookProgressCalculator {
         
         val totalBytesDownloaded = trackProgresses.sumOf { it.bytesDownloaded }
         val totalBytes = trackProgresses.sumOf { it.totalBytes }
-        
-        val overallProgress = if (totalBytes > 0) {
-            (totalBytesDownloaded.toFloat() / totalBytes.toFloat()) * 100f
-        } else {
-            // Fallback to track count based progress
-            val completedTracks = trackProgresses.count { it.percentComplete >= 100f }
-            (completedTracks.toFloat() / totalTracks.toFloat()) * 100f
-        }
+
+        // Divide by totalTracks (constant), not trackProgresses.size (variable) —
+        // avoids percentage dropping when a new track appears in the map
+        val overallProgress = trackProgresses.sumOf { it.percentComplete.toDouble() }.toFloat() / totalTracks
         
         // Use weighted average for more stable speed calculation
         val activeDownloads = trackProgresses.filter { it.downloadSpeed > 1000 } // Only consider reasonable speeds

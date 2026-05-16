@@ -177,7 +177,6 @@ class ChapterListActivity : ComponentActivity() {
         libraryItem: LibraryItem,
     ) {
         // Collect download progress from service
-        val downloadProgressFlow = MyDownloadService.getProgressFlow()
         val trackProgresses = remember { mutableStateMapOf<String, DownloadProgress>() }
         var audiobookProgress by remember { mutableStateOf<AudiobookDownloadProgress?>(null) }
 
@@ -198,50 +197,7 @@ class ChapterListActivity : ComponentActivity() {
         }
         val totalTracks = libraryItem.media.tracks.size
 
-        // Listen for progress updates
-        LaunchedEffect(libraryItem.id) {
-            try {
-                Timber.d("Starting to collect download progress for audiobook: ${libraryItem.id}")
-                downloadProgressFlow.collect { trackProgress ->
-                    Timber.d("Received progress update for track: ${trackProgress.trackId}, progress: ${trackProgress.percentComplete}%")
-                    
-                    // Debug: Log all track IDs for this audiobook
-                    val audiobookTrackIds = libraryItem.media.tracks.map { it.id }
-                    Timber.d("Audiobook track IDs: $audiobookTrackIds")
-                    
-                    // Check if this progress update is for one of our tracks
-                    if (libraryItem.media.tracks.any { it.id == trackProgress.trackId }) {
-                        Timber.d("Progress update matches one of our tracks!")
-                        trackProgresses[trackProgress.trackId] = trackProgress
-                        
-                        // Calculate overall audiobook progress
-                        val currentProgresses = trackProgresses.values.toList()
-                        if (currentProgresses.isNotEmpty()) {
-                            audiobookProgress = AudiobookProgressCalculator.calculateAudiobookProgress(
-                                libraryItem, 
-                                currentProgresses
-                            )
-                            Timber.d("Updated audiobook progress: ${audiobookProgress?.overallProgress}%")
-                        }
-                        
-                        // Update download states
-                        downloadedCount = libraryItem.media.tracks.count { track -> 
-                            track.isDownloaded(this@ChapterListActivity) 
-                        }
-                        isDownloading = libraryItem.media.tracks.any { track ->
-                            track.isDownloading(this@ChapterListActivity)
-                        }
-                        isDownloaded = libraryItem.media.tracks.all { track -> 
-                            track.isDownloaded(this@ChapterListActivity) 
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Timber.e(e, "Error collecting download progress")
-            }
-        }
-
-        // Periodic progress checker for more frequent updates
+        // Periodic progress checker
         LaunchedEffect(isDownloading) {
             while (isDownloading) {
                 try {
