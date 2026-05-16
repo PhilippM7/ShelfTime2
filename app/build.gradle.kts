@@ -30,10 +30,10 @@ android {
                 "proguard-rules.pro"
             )
         }
-        create("legacy") {
+        create("before") {
             initWith(getByName("debug"))
-            applicationIdSuffix = ".legacy"
-            versionNameSuffix = "-legacy"
+            applicationIdSuffix = ".before"
+            versionNameSuffix = "-before"
             matchingFallbacks += listOf("debug")
         }
     }
