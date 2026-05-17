@@ -201,66 +201,74 @@ class ChapterListActivity : ComponentActivity() {
         LaunchedEffect(isDownloading) {
             while (isDownloading) {
                 try {
-                    // Check progress of all tracks manually
+                    // Check progress of all tracks
                     val downloadManager = MyDownloadService.getDownloadManager(this@ChapterListActivity)
                     var hasActiveDownloads = false
-                    
+
                     for (track in libraryItem.media.tracks) {
                         val download = downloadManager.downloadIndex.getDownload(track.id)
-                        if (download != null && download.state == Download.STATE_DOWNLOADING) {
-                            hasActiveDownloads = true
-                            
-                            // Calculate progress manually
-                            val percentComplete = if (download.percentDownloaded != C.PERCENTAGE_UNSET.toFloat()) {
-                                download.percentDownloaded
-                            } else {
-                                0f
+                        when (download?.state) {
+                            Download.STATE_COMPLETED -> {
+                                // Count completed tracks as 100%
+                                trackProgresses[track.id] = DownloadProgress(
+                                    trackId = track.id,
+                                    bytesDownloaded = download.bytesDownloaded,
+                                    totalBytes = download.bytesDownloaded,
+                                    percentComplete = 100f,
+                                    downloadSpeed = 0L,
+                                    estimatedTimeRemaining = 0L,
+                                    state = kaf.audiobookshelfwearos.app.data.DownloadState.COMPLETED
+                                )
                             }
-                            
-                            val bytesDownloaded = download.bytesDownloaded
-                            val totalBytes = if (download.contentLength != -1L) {
-                                download.contentLength
-                            } else {
-                                if (percentComplete > 0) {
+                            Download.STATE_DOWNLOADING -> {
+                                hasActiveDownloads = true
+                                val percentComplete = if (download.percentDownloaded != C.PERCENTAGE_UNSET.toFloat()) {
+                                    download.percentDownloaded
+                                } else 0f
+                                val bytesDownloaded = download.bytesDownloaded
+                                val totalBytes = if (download.contentLength != -1L) {
+                                    download.contentLength
+                                } else if (percentComplete > 0) {
                                     (bytesDownloaded / (percentComplete / 100f)).toLong()
-                                } else {
-                                    0L
+                                } else 0L
+                                val downloadSpeed = DownloadProgressCalculator.calculateDownloadSpeed(track.id, bytesDownloaded)
+                                trackProgresses[track.id] = DownloadProgress(
+                                    trackId = track.id,
+                                    bytesDownloaded = bytesDownloaded,
+                                    totalBytes = totalBytes,
+                                    percentComplete = percentComplete,
+                                    downloadSpeed = downloadSpeed,
+                                    estimatedTimeRemaining = DownloadProgressCalculator.calculateEstimatedTime(
+                                        totalBytes - bytesDownloaded, downloadSpeed
+                                    ),
+                                    state = kaf.audiobookshelfwearos.app.data.DownloadState.DOWNLOADING
+                                )
+                            }
+                            Download.STATE_QUEUED -> {
+                                hasActiveDownloads = true
+                                if (!trackProgresses.containsKey(track.id)) {
+                                    trackProgresses[track.id] = DownloadProgress(
+                                        trackId = track.id,
+                                        bytesDownloaded = 0L,
+                                        totalBytes = 0L,
+                                        percentComplete = 0f,
+                                        downloadSpeed = 0L,
+                                        estimatedTimeRemaining = Long.MAX_VALUE,
+                                        state = kaf.audiobookshelfwearos.app.data.DownloadState.QUEUED
+                                    )
                                 }
                             }
-                            
-                            val downloadSpeed = DownloadProgressCalculator.calculateDownloadSpeed(
-                                track.id, 
-                                bytesDownloaded
-                            )
-                            val remainingBytes = totalBytes - bytesDownloaded
-                            val estimatedTime = DownloadProgressCalculator.calculateEstimatedTime(
-                                remainingBytes, 
-                                downloadSpeed
-                            )
-                            
-                            val manualProgress = DownloadProgress(
-                                trackId = track.id,
-                                bytesDownloaded = bytesDownloaded,
-                                totalBytes = totalBytes,
-                                percentComplete = percentComplete,
-                                downloadSpeed = downloadSpeed,
-                                estimatedTimeRemaining = estimatedTime,
-                                state = kaf.audiobookshelfwearos.app.data.DownloadState.DOWNLOADING
-                            )
-                            
-                            trackProgresses[track.id] = manualProgress
-                            Timber.d("Manual progress check for ${track.id}: ${percentComplete}%")
+                            else -> {} // not started yet, skip
                         }
                     }
-                    
-                    // Update audiobook progress if we have active downloads
-                    if (hasActiveDownloads && trackProgresses.isNotEmpty()) {
+
+                    // Recalculate overall progress using all known track states
+                    if (trackProgresses.isNotEmpty()) {
                         val currentProgresses = trackProgresses.values.toList()
                         audiobookProgress = AudiobookProgressCalculator.calculateAudiobookProgress(
-                            libraryItem, 
+                            libraryItem,
                             currentProgresses
                         )
-                        Timber.d("Manual audiobook progress update: ${audiobookProgress?.overallProgress}%")
                     }
                     
                     // Update download states
