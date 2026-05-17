@@ -62,7 +62,6 @@ import androidx.wear.input.RemoteInputIntentHelper
 import androidx.wear.input.wearableExtender
 import coil.ImageLoader
 import coil.compose.AsyncImage
-import coil.request.CachePolicy
 import kaf.audiobookshelfwearos.R
 import kaf.audiobookshelfwearos.app.ApiHandler
 import kaf.audiobookshelfwearos.app.data.Library
@@ -117,8 +116,6 @@ class BookListActivity : ComponentActivity() {
                     }
                     .build()
             }
-            .memoryCachePolicy(CachePolicy.ENABLED)
-            .diskCachePolicy(CachePolicy.ENABLED)
             .build()
         val serverUrl = userDataManager.getCompleteAddress()
 
