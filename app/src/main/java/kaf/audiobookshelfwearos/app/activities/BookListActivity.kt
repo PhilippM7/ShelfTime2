@@ -14,7 +14,6 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -149,11 +148,7 @@ class BookListActivity : ComponentActivity() {
             }
             
             val displayLibraries = if (isSearchActive) filteredLibraries else libraries
-            
-            // Main content without fixed header
-            if (!isSearchActive) {
-                ManualLoadView(displayLibraries, isSearchActive)
-            }
+
             Libraries(
                 displayLibraries,
                 isSearchActive = isSearchActive,
@@ -227,61 +222,6 @@ class BookListActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun ManualLoadView(libraries: List<Library>?, isSearchActive: Boolean = false) {
-        val isLoading by viewModel.isLoading.collectAsState()
-
-        if (isLoading) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center, modifier = Modifier
-                    .fillMaxSize()
-            ) {
-                CircularProgressIndicator(
-                    startAngle = 0f,
-                    modifier = Modifier
-                        .width(80.dp)
-                        .height(80.dp),
-                    indicatorColor = MaterialTheme.colors.secondary,
-                    trackColor = MaterialTheme.colors.onBackground.copy(
-                        alpha = 0.1f
-                    ),
-                    strokeWidth = 8.dp
-                )
-            }
-        }
-
-        if (libraries?.isEmpty() == true && !isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(0.dp)
-            ) {
-
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center, modifier = Modifier
-                        .fillMaxSize()
-                ) {
-                    Text(
-                        text = if (isSearchActive) "No results found" else "There was some problem. Try again.",
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(10.dp)
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    if (!isSearchActive) {
-                        Button(onClick = {
-                            viewModel.getLibraries(this@BookListActivity, true, UserDataManager(this@BookListActivity).offlineMode)
-                        }) {
-                            Text(text = "LOAD")
-                        }
-                    }
-                }
-            }
-
-        }
-    }
-
-    @Composable
     private fun Libraries(
         libraries: List<Library>?,
         isSearchActive: Boolean = false,
@@ -290,10 +230,10 @@ class BookListActivity : ComponentActivity() {
         serverUrl: String = "",
         onSearchToggle: () -> Unit = {}
     ) {
+        val isLoading by viewModel.isLoading.collectAsState()
         val scalingLazyListState = rememberScalingLazyListState(0)
         val focusRequester = remember { FocusRequester() }
 
-        // Request focus when the composable is first displayed
         LaunchedEffect(Unit) {
             focusRequester.requestFocus()
         }
@@ -323,7 +263,6 @@ class BookListActivity : ComponentActivity() {
                     .focusable(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Add search header as first item
                 item {
                     SearchHeader(
                         isSearchActive = isSearchActive,
@@ -331,29 +270,55 @@ class BookListActivity : ComponentActivity() {
                         onSearchToggle = onSearchToggle
                     )
                 }
-                
-                libraries?.let { libraryList ->
+
+                if (isLoading) {
+                    item {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth().padding(20.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                startAngle = 0f,
+                                modifier = Modifier.width(60.dp).height(60.dp),
+                                indicatorColor = MaterialTheme.colors.secondary,
+                                trackColor = MaterialTheme.colors.onBackground.copy(alpha = 0.1f),
+                                strokeWidth = 6.dp
+                            )
+                        }
+                    }
+                } else {
+                    val libraryList = libraries ?: emptyList()
                     val hasResults = libraryList.any { it.libraryItems.isNotEmpty() }
-                    
-                    if (isSearchActive && !hasResults && searchQuery.isNotEmpty()) {
-                        // Show "No results found" message in search mode
+
+                    if (!hasResults) {
                         item {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(20.dp)
+                                modifier = Modifier.fillMaxWidth().padding(20.dp)
                             ) {
                                 Text(
-                                    text = "No results found",
+                                    text = if (isSearchActive && searchQuery.isNotEmpty()) "No results found"
+                                           else "There was some problem. Try again.",
                                     textAlign = TextAlign.Center,
-                                    style = MaterialTheme.typography.body1
+                                    modifier = Modifier.padding(10.dp)
                                 )
+                                if (!isSearchActive) {
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Button(onClick = {
+                                        viewModel.getLibraries(
+                                            this@BookListActivity, true,
+                                            UserDataManager(this@BookListActivity).offlineMode,
+                                            forceRefresh = true
+                                        )
+                                    }) {
+                                        Text(text = "LOAD")
+                                    }
+                                }
                             }
                         }
                     } else {
-                        // Show library items
                         for ((libIndex, library) in libraryList.withIndex()) {
                             itemsIndexed(library.libraryItems, key = { _, item -> item.id }) { index, item ->
                                 Column {

@@ -144,7 +144,6 @@ class ApiHandler(private val context: Context) {
 
     suspend fun getLibraryItems(id: String): List<LibraryItem> {
         return withContext(Dispatchers.IO) {
-            if (BuildConfig.DEBUG) Thread.sleep(1500)
             val request = getRequest("/api/libraries/$id/items?sort=updatedAt")
 
             client.newCall(request).execute().use { response ->
@@ -168,8 +167,6 @@ class ApiHandler(private val context: Context) {
     suspend fun updateProgress(userMediaProgress: UserMediaProgress, retryCount: Int = 0): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                if (BuildConfig.DEBUG) Thread.sleep(1000)
-
                 val serverItem = getItem(userMediaProgress.libraryItemId)
 
                 serverItem?.let {

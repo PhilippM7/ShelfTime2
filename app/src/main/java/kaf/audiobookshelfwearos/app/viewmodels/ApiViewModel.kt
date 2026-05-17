@@ -147,11 +147,24 @@ class ApiViewModel(private val apiHandler: ApiHandler) : ViewModel() {
         }
     }
 
+    private var lastLibraryFetchTime = 0L
+    private val libraryFetchCooldownMs = 60_000L
+
     fun getLibraries(
         context: Context,
         includeLocalProgress: Boolean = true,
-        onlyDownloaded: Boolean = false
+        onlyDownloaded: Boolean = false,
+        forceRefresh: Boolean = false
     ) {
+        val now = System.currentTimeMillis()
+        val hasData = _libraries.value?.isNotEmpty() == true
+        val recentlyFetched = (now - lastLibraryFetchTime) < libraryFetchCooldownMs
+
+        if (hasData && recentlyFetched && !forceRefresh) {
+            _isLoading.value = false
+            return
+        }
+
         _isLoading.value = true
         viewModelScope.launch {
             var localItems = listOf<LibraryItem>()
@@ -165,7 +178,6 @@ class ApiViewModel(private val apiHandler: ApiHandler) : ViewModel() {
                 }
                 allLibraries.add(localLibrary)
                 _libraries.postValue(listOf(localLibrary))
-                // Update filtered libraries when libraries change
                 if (_searchQuery.value.isBlank()) {
                     _filteredLibraries.value = listOf(localLibrary)
                 } else {
@@ -179,9 +191,9 @@ class ApiViewModel(private val apiHandler: ApiHandler) : ViewModel() {
                 library.libraryItems.removeAll { item2 -> localItems.any { item1 -> item1.id == item2.id } }
                 allLibraries.add(library)
             }
+            lastLibraryFetchTime = System.currentTimeMillis()
             _isLoading.value = false
             _libraries.postValue(allLibraries)
-            // Update filtered libraries when libraries change
             if (_searchQuery.value.isBlank()) {
                 _filteredLibraries.value = allLibraries
             } else {
