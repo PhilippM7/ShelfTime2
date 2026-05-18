@@ -1,12 +1,14 @@
 package kaf.audiobookshelfwearos.app.data
 
 import android.content.Context
+import androidx.compose.runtime.Stable
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
 
+@Stable
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Entity(tableName = "library_item")
 data class LibraryItem(

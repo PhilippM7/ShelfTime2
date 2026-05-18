@@ -168,14 +168,12 @@ class ApiViewModel(private val apiHandler: ApiHandler) : ViewModel() {
         _isLoading.value = true
         viewModelScope.launch {
             var localItems = listOf<LibraryItem>()
-            var allLibraries = arrayListOf<Library>()
+            val allLibraries = mutableListOf<Library>()
             if (includeLocalProgress) {
                 val db = (context.applicationContext as MainApp).database
                 localItems = db.libraryItemDao().getAllLibraryItems()
-                val localLibrary = Library(libraryItems = localItems.toCollection(ArrayList()))
-                if (onlyDownloaded) {
-                    localLibrary.libraryItems.retainAll { it.isDownloaded(context) }
-                }
+                val items = if (onlyDownloaded) localItems.filter { it.isDownloaded(context) } else localItems
+                val localLibrary = Library(libraryItems = items)
                 allLibraries.add(localLibrary)
                 _libraries.postValue(listOf(localLibrary))
                 if (_searchQuery.value.isBlank()) {
@@ -188,8 +186,10 @@ class ApiViewModel(private val apiHandler: ApiHandler) : ViewModel() {
 
             val res = loadLibraries(onlyDownloaded, context)
             for (library in res) {
-                library.libraryItems.removeAll { item2 -> localItems.any { item1 -> item1.id == item2.id } }
-                allLibraries.add(library)
+                val deduped = library.libraryItems.filter { item2 ->
+                    localItems.none { item1 -> item1.id == item2.id }
+                }
+                allLibraries.add(library.copy(libraryItems = deduped))
             }
             lastLibraryFetchTime = System.currentTimeMillis()
             _isLoading.value = false
@@ -204,17 +204,14 @@ class ApiViewModel(private val apiHandler: ApiHandler) : ViewModel() {
 
     private suspend fun loadLibraries(onlyDownloaded: Boolean, context: Context) = coroutineScope {
         val libraries = apiHandler.getAllLibraries()
-        Timber.d("onlyDownloaded $onlyDownloaded")
 
         val deferredLibraries = libraries.map { library ->
             async {
-                Timber.d("onlyDownloaded $onlyDownloaded")
                 val libraryItems = apiHandler.getLibraryItems(library.id)
                 val filteredItems = if (onlyDownloaded) {
                     libraryItems.filter { it.isDownloaded(context) }
                 } else libraryItems
-                library.libraryItems.addAll(filteredItems)
-                library
+                library.copy(libraryItems = filteredItems)
             }
         }
 
@@ -256,7 +253,7 @@ class ApiViewModel(private val apiHandler: ApiHandler) : ViewModel() {
                 item.title.contains(query, ignoreCase = true) ||
                 item.author.contains(query, ignoreCase = true)
             }
-            library.copy(libraryItems = ArrayList(filteredItems))
+            library.copy(libraryItems = filteredItems)
         }.filter { it.libraryItems.isNotEmpty() }
         
         _filteredLibraries.value = filtered

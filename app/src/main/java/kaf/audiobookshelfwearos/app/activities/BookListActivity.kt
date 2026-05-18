@@ -60,7 +60,9 @@ import androidx.wear.compose.material.VignettePosition
 import androidx.wear.input.RemoteInputIntentHelper
 import androidx.wear.input.wearableExtender
 import coil.ImageLoader
-import coil.compose.AsyncImage
+import coil.compose.rememberAsyncImagePainter
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
 import kaf.audiobookshelfwearos.R
 import kaf.audiobookshelfwearos.app.ApiHandler
 import kaf.audiobookshelfwearos.app.data.Library
@@ -373,12 +375,16 @@ class BookListActivity : ComponentActivity() {
 
     @Composable
     private fun CoverImage(itemId: String, imageLoader: ImageLoader, serverUrl: String) {
-        AsyncImage(
+        val painter = rememberAsyncImagePainter(
             model = "$serverUrl/api/items/$itemId/cover?width=200",
             imageLoader = imageLoader,
-            contentDescription = null,
             placeholder = painterResource(R.drawable.placeholder),
-            error = painterResource(R.drawable.placeholder),
+            error = painterResource(R.drawable.placeholder)
+        )
+        Image(
+            painter = painter,
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(10.dp)
